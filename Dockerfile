@@ -41,7 +41,9 @@ RUN tlmgr install \
       latexmk \
       acmart \
       inconsolata\
-      newtx
+      newtx \
+      biblatex \
+      biber
 RUN mkdir -p \
       /usr/local/texlive/texmf-local/fonts/opentype/google/notosanscjk/ 
 RUN  mkdir -p \
