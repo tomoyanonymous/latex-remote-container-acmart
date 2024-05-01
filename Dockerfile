@@ -1,10 +1,10 @@
 # based on https://github.com/aruneko/texlive
 # and https://github.com/nukopy/ubuntu-texlive-ja
 
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PATH $PATH:/usr/local/texlive/2021/bin/x86_64-linux
+ENV PATH $PATH:/usr/local/texlive/2024/bin/x86_64-linux
 
 # install general packages
 RUN apt-get update && \
