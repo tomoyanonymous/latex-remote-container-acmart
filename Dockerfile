@@ -4,7 +4,10 @@
 FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PATH $PATH:/usr/local/texlive/2024/bin/x86_64-linux
+# Set uid and gid to the current user
+ARG USER
+ARG UID
+ARG GID
 
 # install general packages
 RUN apt-get update && \
@@ -15,29 +18,48 @@ RUN apt-get update && \
       curl \
       wget \
       ssh\
-      locales && \
+      locales \
+      libfontconfig1 \
+      ca-certificates \
+      fonts-ipafont \
+      && \
     # clean to reduce image size
     apt-get clean -y && \
     apt-get autoremove -y && \
     apt-get autoclean -y && \
     rm -rf /var/lib/apt/lists/*
 
-RUN cd /tmp && wget -nv -O install-tl.tar.gz \
-      http://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz --no-check-certificate\
-&& mkdir install-tl \
-&& tar -xzf install-tl.tar.gz -C install-tl --strip-components=1 \
-&& cd install-tl \
-&& printf "%s\n" \
-      "selected_scheme scheme-basic" \
-      "option_doc 0" \
-      "option_src 0" \
-      > ./texlive.profile \
-&& ./install-tl --profile=./texlive.profile 
-RUN tlmgr install \
+ARG ARCHIVE_URL="https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz"
+ENV TEXLIVE_VERSION="2024"
+
+WORKDIR /tmp/install-tl-unx
+COPY ./texlive.profile ./
+
+# Install TeX Live
+WORKDIR /tmp/install-tl-unx
+COPY ./texlive.profile ./
+RUN wget -nv ${ARCHIVE_URL}
+RUN tar -xzf ./install-tl-unx.tar.gz --strip-components=1
+RUN ./install-tl --profile=./texlive.profile --no-interaction
+RUN rm -rf /tmp/install-tl-unx
+
+# Copy `docker-entrypoint.sh` for adding TeX Live binaries to PATH
+COPY ./docker-entrypoint.sh /
+RUN chmod +x /docker-entrypoint.sh
+
+# Use docker-entrypoint.sh to acquire path
+RUN . /docker-entrypoint.sh && tlmgr update --self --all
+RUN . /docker-entrypoint.sh && tlmgr install \
+      collection-basic \
       collection-latexrecommended \
-      collection-latexextra \
+      collection-xetex \
+      collection-bibtexextra \
+      collection-binextra \
       collection-fontsrecommended \
+      collection-langenglish \
       collection-langjapanese \
+      collection-pictures \
+      collection-mathscience \
       latexmk \
       acmart \
       inconsolata\
@@ -46,13 +68,18 @@ RUN tlmgr install \
       biber
 RUN mkdir -p \
       /usr/local/texlive/texmf-local/fonts/opentype/google/notosanscjk/ 
-RUN  mkdir -p \
+RUN mkdir -p \
       /usr/local/texlive/texmf-local/fonts/opentype/google/notoserifcjk/
 RUN ln -s /usr/share/fonts/opentype/noto/NotoSansCJK-*.ttc \
       /usr/local/texlive/texmf-local/fonts/opentype/google/notosanscjk/ 
 RUN ln -s /usr/share/fonts/opentype/noto/NotoSerifCJK-*.ttc \
       /usr/local/texlive/texmf-local/fonts/opentype/google/notoserifcjk/ 
-RUN mktexlsr 
+RUN mkdir /usr/local/texlive/texmf-local/fonts/truetype
+RUN mkdir /usr/local/texlive/texmf-local/fonts/truetype/ipafont
+RUN ln -s /usr/share/fonts/truetype/ipafont \
+      /usr/local/texlive/texmf-local/fonts/truetype/ipafont
+
+RUN . /docker-entrypoint.sh && mktexlsr 
 
 RUN cd ../ && rm -rf install-tl.tar.gz install-tl
 RUN apt autoremove -y
@@ -64,4 +91,5 @@ VOLUME /workdir
 
 WORKDIR /workdir
 
-CMD ["/bin/bash"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["bash"]
