@@ -17,7 +17,7 @@ based on
 - https://github.com/nukopy/ubuntu-texlive-ja
 - https://github.com/aruneko/texlive
 
-Uses Tex Live 2024.
+Uses TeX Live 2026 (with collection-latexextra and collection-publishers, so current acmart builds out of the box). pandoc is also installed.
 
 Additionally, it is compatible with acmart package (with libertine font and more) and installs IPA fonts.
 

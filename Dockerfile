@@ -22,6 +22,7 @@ RUN apt-get update && \
       libfontconfig1 \
       ca-certificates \
       fonts-ipafont \
+      pandoc \
       && \
     # clean to reduce image size
     apt-get clean -y && \
@@ -30,7 +31,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 ARG ARCHIVE_URL="https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz"
-ENV TEXLIVE_VERSION="2024"
+ENV TEXLIVE_VERSION="2026"
 
 WORKDIR /tmp/install-tl-unx
 COPY ./texlive.profile ./
@@ -42,6 +43,12 @@ RUN wget -nv ${ARCHIVE_URL}
 RUN tar -xzf ./install-tl-unx.tar.gz --strip-components=1
 RUN ./install-tl --profile=./texlive.profile --no-interaction
 RUN rm -rf /tmp/install-tl-unx
+# Fail early if the installer on CTAN is not the release named in TEXLIVE_VERSION
+RUN test -d /usr/local/texlive/${TEXLIVE_VERSION}/bin/$(uname -m)-linux
+# Arch-independent symlink so PATH also works when the entrypoint is bypassed
+# (e.g. devcontainers / docker-compose overriding the entrypoint)
+RUN ln -s /usr/local/texlive/${TEXLIVE_VERSION}/bin/$(uname -m)-linux /usr/local/texlive/bin
+ENV PATH=/usr/local/texlive/bin:${PATH}
 
 # Copy `docker-entrypoint.sh` for adding TeX Live binaries to PATH
 COPY ./docker-entrypoint.sh /
@@ -60,9 +67,12 @@ RUN . /docker-entrypoint.sh && tlmgr install \
       collection-langjapanese \
       collection-pictures \
       collection-mathscience \
+      collection-latexextra \
+      collection-publishers \
       latexmk \
       acmart \
-      inconsolata\
+      inconsolata \
+      libertine \
       newtx \
       biblatex \
       biber
