@@ -67,8 +67,6 @@ RUN . /docker-entrypoint.sh && tlmgr install \
       collection-langjapanese \
       collection-pictures \
       collection-mathscience \
-      collection-latexextra \
-      collection-publishers \
       latexmk \
       acmart \
       inconsolata \
@@ -76,6 +74,14 @@ RUN . /docker-entrypoint.sh && tlmgr install \
       newtx \
       biblatex \
       biber
+# collection-latexextra and collection-publishers (acmart etc.), minus yb-book:
+# yb-book (in publishers) depends on the whole collection-fontsextra (~2.5GB of fonts),
+# which would more than double the image size.
+RUN . /docker-entrypoint.sh && \
+    for c in collection-latexextra collection-publishers; do \
+      tlmgr info --data depends $c | tr ':' '\n'; \
+    done | grep -vx yb-book | sort -u | xargs tlmgr install && \
+    ! tlmgr info --only-installed --data name | grep -qx collection-fontsextra
 RUN mkdir -p \
       /usr/local/texlive/texmf-local/fonts/opentype/google/notosanscjk/ 
 RUN mkdir -p \
